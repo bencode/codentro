@@ -9,25 +9,25 @@ pub fn print_module_json(module: &ModuleIR) -> Result<()> {
 }
 
 pub fn print_module_table(module: &ModuleIR, _no_suggest: bool) -> Result<()> {
-    println!("Target: {} (lang={:?}, LOC={}, Entropy={:.2})",
+    println!("Target: {} (lang={:?}, LOC={}, Complexity={:.2})",
         module.path,
         module.language,
         module.loc,
-        module.entropy
+        module.complexity
     );
     println!();
 
     if !module.symbols.is_empty() {
         println!("[Structure]");
-        println!("{:<12} {:<25} {:<6} {:<8}", "Type", "Name", "LOC", "Entropy");
-        println!("{}", "-".repeat(60));
+        println!("{:<12} {:<25} {:<6} {:<10}", "Type", "Name", "LOC", "Complexity");
+        println!("{}", "-".repeat(62));
 
         for symbol in &module.symbols {
-            println!("{:<12} {:<25} {:<6} {:<8.2}",
+            println!("{:<12} {:<25} {:<6} {:<10.2}",
                 format!("{:?}", symbol.kind).to_lowercase(),
                 symbol.name,
                 symbol.loc,
-                symbol.entropy.unwrap_or(0.0)
+                symbol.complexity.unwrap_or(0.0)
             );
         }
         println!();
@@ -68,7 +68,7 @@ pub fn print_module_table(module: &ModuleIR, _no_suggest: bool) -> Result<()> {
     }
 
     println!("[Metrics]");
-    println!("LOC={} · Entropy={:.2}", module.loc, module.entropy);
+    println!("LOC={} · Complexity={:.2}", module.loc, module.complexity);
 
     Ok(())
 }
@@ -76,22 +76,22 @@ pub fn print_module_table(module: &ModuleIR, _no_suggest: bool) -> Result<()> {
 pub fn print_module_markdown(module: &ModuleIR, _no_suggest: bool) -> Result<()> {
     println!("# {}", module.path);
     println!();
-    println!("**Language:** {:?} | **LOC:** {} | **Entropy:** {:.2}",
-        module.language, module.loc, module.entropy);
+    println!("**Language:** {:?} | **LOC:** {} | **Complexity:** {:.2}",
+        module.language, module.loc, module.complexity);
     println!();
 
     if !module.symbols.is_empty() {
         println!("## Structure");
         println!();
-        println!("| Type | Name | LOC | Entropy |");
-        println!("|------|------|-----|---------|");
+        println!("| Type | Name | LOC | Complexity |");
+        println!("|------|------|-----|------------|");
 
         for symbol in &module.symbols {
             println!("| {} | {} | {} | {:.2} |",
                 format!("{:?}", symbol.kind),
                 symbol.name,
                 symbol.loc,
-                symbol.entropy.unwrap_or(0.0)
+                symbol.complexity.unwrap_or(0.0)
             );
         }
         println!();

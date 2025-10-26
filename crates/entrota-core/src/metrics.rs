@@ -47,7 +47,9 @@ pub fn count_lines(source: &str) -> LOCStats {
     stats
 }
 
-pub fn calculate_entropy(module: &ModuleIR) -> f64 {
+/// Calculate module complexity score (0.0-1.0)
+/// Combines symbol density and average symbol size using a weighted formula
+pub fn calculate_complexity(module: &ModuleIR) -> f64 {
     let symbol_count = module.symbols.len() as f64;
     let loc = module.loc as f64;
 
@@ -62,16 +64,17 @@ pub fn calculate_entropy(module: &ModuleIR) -> f64 {
         0.0
     };
 
-    let size_entropy = if avg_symbol_size > 0.0 {
+    let size_complexity = if avg_symbol_size > 0.0 {
         1.0 - (1.0 / (1.0 + avg_symbol_size / 50.0))
     } else {
         0.0
     };
 
-    (symbol_density * 0.4 + size_entropy * 0.6).clamp(0.0, 1.0)
+    (symbol_density * 0.4 + size_complexity * 0.6).clamp(0.0, 1.0)
 }
 
-pub fn calculate_symbol_entropy(symbol: &Symbol) -> f64 {
+/// Calculate symbol complexity score (0.0-1.0) based on LOC
+pub fn calculate_symbol_complexity(symbol: &Symbol) -> f64 {
     let loc = symbol.loc as f64;
     if loc == 0.0 {
         return 0.0;
@@ -83,8 +86,8 @@ pub fn calculate_symbol_entropy(symbol: &Symbol) -> f64 {
 pub fn generate_suggestions(module: &ModuleIR, fan_in: u32, fan_out: u32) -> Vec<String> {
     let mut suggestions = Vec::new();
 
-    if module.entropy > 0.75 {
-        suggestions.push("High entropy detected - consider splitting into smaller modules".to_string());
+    if module.complexity > 0.75 {
+        suggestions.push("High complexity detected - consider splitting into smaller modules".to_string());
     }
 
     if fan_out > 10 {
@@ -96,10 +99,10 @@ pub fn generate_suggestions(module: &ModuleIR, fan_in: u32, fan_out: u32) -> Vec
     }
 
     for symbol in &module.symbols {
-        if let Some(entropy) = symbol.entropy {
-            if entropy > 0.8 && symbol.loc > 50 {
+        if let Some(complexity) = symbol.complexity {
+            if complexity > 0.8 && symbol.loc > 50 {
                 suggestions.push(format!(
-                    "Split or isolate high-entropy {} '{}'",
+                    "Split or isolate complex {} '{}'",
                     format!("{:?}", symbol.kind).to_lowercase(),
                     symbol.name
                 ));

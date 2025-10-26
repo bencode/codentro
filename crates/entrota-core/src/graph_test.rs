@@ -8,7 +8,7 @@ mod tests {
             path: path.to_string(),
             language: Some("typescript".to_string()),
             loc: 100,
-            entropy: 0.5,
+            complexity: 0.5,
             symbols: vec![],
             outgoing: vec![],
             incoming: vec![],

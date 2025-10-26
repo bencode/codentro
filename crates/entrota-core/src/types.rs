@@ -17,8 +17,9 @@ pub struct Symbol {
     pub kind: SymbolKind,
     pub name: String,
     pub loc: u32,
+    /// Complexity score (0.0-1.0), not Shannon entropy
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub entropy: Option<f64>,
+    pub complexity: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -49,7 +50,8 @@ pub struct ModuleIR {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
     pub loc: u32,
-    pub entropy: f64,
+    /// Complexity score (0.0-1.0), aggregated from multiple metrics
+    pub complexity: f64,
     #[serde(default)]
     pub symbols: Vec<Symbol>,
     #[serde(default)]
@@ -70,7 +72,7 @@ pub struct FileMetrics {
 pub struct DirectoryMetrics {
     pub files: u32,
     pub loc: u32,
-    pub avg_entropy: f64,
+    pub avg_complexity: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,7 +81,7 @@ pub struct ChildEntry {
     #[serde(rename = "type")]
     pub entry_type: String,
     pub loc: u32,
-    pub entropy: f64,
+    pub complexity: f64,
 }
 
 pub type Result<T> = std::result::Result<T, anyhow::Error>;

@@ -1,6 +1,6 @@
 use crate::LanguageAdapter;
 use entrota_core::{
-    metrics::{calculate_entropy, calculate_symbol_entropy, count_lines},
+    metrics::{calculate_complexity, calculate_symbol_complexity, count_lines},
     types::{DepEdge, DepKind, ModuleIR, Result, Symbol, SymbolKind},
 };
 use std::path::Path;
@@ -63,11 +63,11 @@ impl TypeScriptAdapter {
                         kind,
                         name: name.to_string(),
                         loc,
-                        entropy: None,
+                        complexity: None,
                     };
-                    let entropy = calculate_symbol_entropy(&symbol);
+                    let complexity = calculate_symbol_complexity(&symbol);
                     symbols.push(Symbol {
-                        entropy: Some(entropy),
+                        complexity: Some(complexity),
                         ..symbol
                     });
                 }
@@ -136,13 +136,13 @@ impl LanguageAdapter for TypeScriptAdapter {
             path: path.to_string_lossy().to_string(),
             language: entrota_core::discovery::detect_language(path),
             loc: loc_stats.code,
-            entropy: 0.0,
+            complexity: 0.0,
             symbols,
             outgoing,
             incoming: Vec::new(),
         };
 
-        module.entropy = calculate_entropy(&module);
+        module.complexity = calculate_complexity(&module);
 
         Ok(module)
     }

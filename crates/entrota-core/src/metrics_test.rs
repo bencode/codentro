@@ -32,75 +32,75 @@ fn test() {}
     }
 
     #[test]
-    fn test_calculate_entropy_empty_module() {
+    fn test_calculate_complexity_empty_module() {
         let module = ModuleIR {
             path: "test.ts".to_string(),
             language: Some("typescript".to_string()),
             loc: 0,
-            entropy: 0.0,
+            complexity: 0.0,
             symbols: vec![],
             outgoing: vec![],
             incoming: vec![],
         };
 
-        let entropy = calculate_entropy(&module);
-        assert_eq!(entropy, 0.0);
+        let complexity = calculate_complexity(&module);
+        assert_eq!(complexity, 0.0);
     }
 
     #[test]
-    fn test_calculate_entropy_with_symbols() {
+    fn test_calculate_complexity_with_symbols() {
         let module = ModuleIR {
             path: "test.ts".to_string(),
             language: Some("typescript".to_string()),
             loc: 100,
-            entropy: 0.0,
+            complexity: 0.0,
             symbols: vec![
                 Symbol {
                     kind: SymbolKind::Function,
                     name: "test".to_string(),
                     loc: 50,
-                    entropy: None,
+                    complexity: None,
                 },
             ],
             outgoing: vec![],
             incoming: vec![],
         };
 
-        let entropy = calculate_entropy(&module);
-        assert!(entropy > 0.0);
-        assert!(entropy <= 1.0);
+        let complexity = calculate_complexity(&module);
+        assert!(complexity > 0.0);
+        assert!(complexity <= 1.0);
     }
 
     #[test]
-    fn test_calculate_symbol_entropy() {
+    fn test_calculate_symbol_complexity() {
         let small_symbol = Symbol {
             kind: SymbolKind::Function,
             name: "small".to_string(),
             loc: 5,
-            entropy: None,
+            complexity: None,
         };
 
         let large_symbol = Symbol {
             kind: SymbolKind::Function,
             name: "large".to_string(),
             loc: 100,
-            entropy: None,
+            complexity: None,
         };
 
-        let small_entropy = calculate_symbol_entropy(&small_symbol);
-        let large_entropy = calculate_symbol_entropy(&large_symbol);
+        let small_complexity = calculate_symbol_complexity(&small_symbol);
+        let large_complexity = calculate_symbol_complexity(&large_symbol);
 
-        assert!(small_entropy < large_entropy);
-        assert!(large_entropy <= 1.0);
+        assert!(small_complexity < large_complexity);
+        assert!(large_complexity <= 1.0);
     }
 
     #[test]
-    fn test_generate_suggestions_high_entropy() {
+    fn test_generate_suggestions_high_complexity() {
         let module = ModuleIR {
             path: "test.ts".to_string(),
             language: Some("typescript".to_string()),
             loc: 100,
-            entropy: 0.8,
+            complexity: 0.8,
             symbols: vec![],
             outgoing: vec![],
             incoming: vec![],
@@ -108,7 +108,7 @@ fn test() {}
 
         let suggestions = generate_suggestions(&module, 2, 3);
         assert!(!suggestions.is_empty());
-        assert!(suggestions.iter().any(|s| s.contains("High entropy")));
+        assert!(suggestions.iter().any(|s| s.contains("High complexity")));
     }
 
     #[test]
@@ -117,7 +117,7 @@ fn test() {}
             path: "test.ts".to_string(),
             language: Some("typescript".to_string()),
             loc: 100,
-            entropy: 0.5,
+            complexity: 0.5,
             symbols: vec![],
             outgoing: vec![],
             incoming: vec![],

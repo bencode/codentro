@@ -7,7 +7,7 @@ Code structure analysis tool for understanding complexity and dependencies.
 Entrota analyzes code structure using Tree-sitter to extract meaningful insights about:
 
 - **Symbols**: Classes, functions, interfaces, types, and enums
-- **Metrics**: Lines of code (LOC) and entropy (complexity measure)
+- **Metrics**: Lines of code (LOC) and complexity score
 - **Dependencies**: Import relationships and coupling strength
 - **Suggestions**: Actionable refactoring recommendations
 
@@ -39,7 +39,7 @@ entrota view <path> [options]
 
 **Options:**
 - `--format <table|json|md>` - Output format (default: table)
-- `--sort <entropy|loc>` - Sort symbols by entropy or LOC (default: entropy)
+- `--sort <entropy|loc>` - Sort symbols by complexity or LOC (default: entropy)
 - `--depth <N>` - Maximum depth for directory traversal
 - `--no-suggest` - Hide refactoring suggestions
 
@@ -59,14 +59,14 @@ entrota view src/
 **Sample output (table format):**
 
 ```
-Target: src/core/graph.ts (lang=Some("typescript"), LOC=85, Entropy=0.62)
+Target: src/core/graph.ts (lang=Some("typescript"), LOC=85, Complexity=0.62)
 
 [Structure]
-Type         Name                      LOC    Entropy
------------- ------------------------- ------ --------
+Type         Name                      LOC    Complexity
+------------ ------------------------- ------ ----------
 class        GraphBuilder              45     0.58
 function     buildGraph                20     0.65
-function     computeEntropy            15     0.71
+function     computeComplexity         15     0.71
 
 [Outgoing]
 Target                        Relation     Strength
@@ -74,7 +74,7 @@ Target                        Relation     Strength
 src/utils/math.ts             import       0.70
 
 [Metrics]
-LOC=85 · Entropy=0.62
+LOC=85 · Complexity=0.62
 ```
 
 ### Scan & Cache
@@ -102,13 +102,15 @@ Entrota follows a clean, modular architecture:
 
 ### Key Concepts
 
-**Entropy**: A normalized complexity measure (0.0 to 1.0) combining:
+**Complexity Score**: A normalized metric (0.0 to 1.0) combining:
 - Symbol density (symbols per LOC)
 - Average symbol size
 - Nesting depth (future)
 - Coupling metrics (future)
 
-Higher entropy suggests code that may benefit from refactoring.
+Higher complexity suggests code that may benefit from refactoring.
+
+Note: This is not Shannon entropy, but a custom complexity measure. Future versions may include actual information-theoretic entropy for specific analyses.
 
 **Dependency Graph**: Files and their import relationships, enabling:
 - Fan-in/fan-out analysis

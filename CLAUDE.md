@@ -110,17 +110,22 @@ cargo build --release
 
 ## Key Metrics
 
-### Entropy Calculation
+### Complexity Calculation
 
-Entropy is a normalized complexity measure (0.0 to 1.0):
+Complexity score is a normalized metric (0.0 to 1.0), **not Shannon entropy**:
 
 ```rust
-pub fn calculate_entropy(module: &ModuleIR) -> f64 {
+pub fn calculate_complexity(module: &ModuleIR) -> f64 {
     let symbol_density = (symbol_count / loc).min(1.0);
-    let size_entropy = 1.0 - (1.0 / (1.0 + avg_symbol_size / 50.0));
-    (symbol_density * 0.4 + size_entropy * 0.6).clamp(0.0, 1.0)
+    let size_complexity = 1.0 - (1.0 / (1.0 + avg_symbol_size / 50.0));
+    (symbol_density * 0.4 + size_complexity * 0.6).clamp(0.0, 1.0)
 }
 ```
+
+**Design rationale:**
+- Exposed to users as "complexity" to avoid confusion with information-theoretic entropy
+- Internal implementation may use information theory concepts in the future
+- Combines symbol density and average symbol size using weighted saturation functions
 
 **Interpretation:**
 - < 0.3: Simple

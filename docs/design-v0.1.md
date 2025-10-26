@@ -9,7 +9,7 @@
 
 | Phase    | Scope                            | Deliverables                                                                                                              |
 | -------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **v0.1** | **CLI-only** structural analysis | `entrota view`, `entrota scan`, table/JSON outputs, Tree-sitter adapters (TS/JS/TSX), entropy & dependency metrics, cache |
+| **v0.1** | **CLI-only** structural analysis | `entrota view`, `entrota scan`, table/JSON outputs, Tree-sitter adapters (TS/JS/TSX), complexity & dependency metrics, cache |
 | **v0.2** | **MCP server** for LLM tools     | MCP endpoints wrapping v0.1 core, same schemas, machine-first outputs                                                     |
 | **v0.3** | **Server + Web UI** (optional)   | Warp server + React SPA using the same core & schemas                                                                     |
 
@@ -41,7 +41,7 @@
 
 ### 2.2 CLI Commands
 
-#### `entrota view <path> [--format table|json|md] [--sort entropy|loc]`
+#### `entrota view <path> [--format table|json|md] [--sort complexity|loc]`
 
 * Input `path` can be a **file** or a **directory**.
 * Outputs the **Main Panel** equivalent:
@@ -53,14 +53,14 @@
 **File example (table):**
 
 ```
-Target: src/core/graph.ts (lang=ts, LOC=321, Entropy=0.73)
+Target: src/core/graph.ts (lang=ts, LOC=321, Complexity=0.73)
 
 [Structure]
-Type       Name                 LOC   Entropy
----------  -------------------  ----  -------
+Type       Name                 LOC   Complexity
+---------  -------------------  ----  ----------
 class      GraphBuilder         200   0.62
 function   buildGraph()          48   0.79
-function   computeEntropy()       73   0.81
+function   computeComplexity()   73   0.81
 
 [Outgoing]
 Target                 Relation   Strength
@@ -74,19 +74,19 @@ Source                 Relation   Strength
 src/api/graph.ts       import     0.40
 
 [Metrics]
-LOC=321 · Entropy=0.73 · FanOut=2 · FanIn=1
+LOC=321 · Complexity=0.73 · FanOut=2 · FanIn=1
 [Suggestions]
-- Split or isolate high-entropy function 'computeEntropy'
+- Split or isolate complex function 'computeComplexity'
 ```
 
 **Directory example (table):**
 
 ```
-Target: src/core/ (files=8, avgEntropy=0.61, LOC=4218)
+Target: src/core/ (files=8, avgComplexity=0.61, LOC=4218)
 
 [Children]
-Type   Name         LOC   Entropy
------  -----------  ----  -------
+Type   Name         LOC   Complexity
+-----  -----------  ----  ----------
 file   graph.ts     321   0.73
 file   layout.ts    289   0.61
 ...
@@ -103,7 +103,7 @@ Source                Relation  Files  Strength≈
 api/graph.ts          import    1      0.5
 
 [Metrics]
-files=8 · LOC=4218 · avgEntropy=0.61
+files=8 · LOC=4218 · avgComplexity=0.61
 [Suggestions]
 - Extract shared utilities with heavy fan-in/fan-out
 ```
@@ -116,11 +116,11 @@ files=8 · LOC=4218 · avgEntropy=0.61
   "type": "file",
   "language": "ts",
   "loc": 321,
-  "entropy": 0.73,
+  "complexity": 0.73,
   "structure": [
-    {"kind":"class","name":"GraphBuilder","loc":200,"entropy":0.62},
-    {"kind":"function","name":"buildGraph","loc":48,"entropy":0.79},
-    {"kind":"function","name":"computeEntropy","loc":73,"entropy":0.81}
+    {"kind":"class","name":"GraphBuilder","loc":200,"complexity":0.62},
+    {"kind":"function","name":"buildGraph","loc":48,"complexity":0.79},
+    {"kind":"function","name":"computeComplexity","loc":73,"complexity":0.81}
   ],
   "outgoing": [
     {"target":"src/utils/math.ts","relation":"import","strength":0.7},
@@ -132,10 +132,10 @@ files=8 · LOC=4218 · avgEntropy=0.61
   "metrics": {
     "fan_in": 1,
     "fan_out": 2,
-    "risk_hotspots": ["computeEntropy"]
+    "risk_hotspots": ["computeComplexity"]
   },
   "suggestions": [
-    "Split or isolate high-entropy function 'computeEntropy'"
+    "Split or isolate complex function 'computeComplexity'"
   ]
 }
 ```
@@ -147,8 +147,8 @@ files=8 · LOC=4218 · avgEntropy=0.61
   "path": "src/core/",
   "type": "directory",
   "children": [
-    {"name":"graph.ts","type":"file","loc":321,"entropy":0.73},
-    {"name":"layout.ts","type":"file","loc":289,"entropy":0.61}
+    {"name":"graph.ts","type":"file","loc":321,"complexity":0.73},
+    {"name":"layout.ts","type":"file","loc":289,"complexity":0.61}
   ],
   "outgoing": [
     {"target":"src/utils/math.ts","relation":"import","files":3,"strength":0.8}
@@ -156,7 +156,7 @@ files=8 · LOC=4218 · avgEntropy=0.61
   "incoming": [
     {"source":"src/api/graph.ts","relation":"import","files":1,"strength":0.5}
   ],
-  "metrics": {"files":8,"loc":4218,"avg_entropy":0.61},
+  "metrics": {"files":8,"loc":4218,"avg_complexity":0.61},
   "suggestions": ["Extract shared utilities with heavy fan-in/fan-out"]
 }
 ```
@@ -177,7 +177,7 @@ files=8 · LOC=4218 · avgEntropy=0.61
 
   * `import` / `export`
   * `class` / `function` (top-level)
-* Module IR build, dependency edges, metrics & entropy.
+* Module IR build, dependency edges, metrics & complexity scores.
 
 **Key Types (simplified):**
 
@@ -186,14 +186,14 @@ pub struct Symbol {
   pub kind: SymbolKind, // Class | Function | Const | ...
   pub name: String,
   pub loc: u32,
-  pub entropy: f64,
+  pub complexity: f64,  // Complexity score, not Shannon entropy
 }
 
 pub struct ModuleIR {
   pub path: String,
   pub language: Option<String>,
   pub loc: u32,
-  pub entropy: f64,
+  pub complexity: f64,  // Complexity score, not Shannon entropy
   pub symbols: Vec<Symbol>,
   pub outgoing: Vec<DepEdge>,   // imports/uses
   pub incoming: Vec<DepEdge>,   // populated during graph build
@@ -212,13 +212,14 @@ pub struct DepEdge {
 * `petgraph::Graph` built over repository modules (nodes = files).
 * Enables subgraph lookups (for dir/file) and fan-in/out metrics.
 
-### 2.4 Entropy & Metrics (v0.1 heuristic)
+### 2.4 Complexity & Metrics (v0.1 heuristic)
 
 * **LOC** (code/comment/blank) — simple scanner.
-* **Entropy** = weighted combination of:
+* **Complexity** = weighted combination of:
 
   * symbol count, max nesting, average function length, coupling proxy (fan-in/out).
-* **Suggestions**: simple rules (e.g., high entropy node → split; high fan-in → consider API boundaries).
+  * Note: This is a custom metric, not Shannon entropy
+* **Suggestions**: simple rules (e.g., high complexity node → split; high fan-in → consider API boundaries).
 
 ### 2.5 Performance & Cache
 
@@ -324,7 +325,7 @@ Any breaking change to schemas → bump minor version & changelog.
 Flags:
 
 * `--format table|json|md` (default `table`)
-* `--sort entropy|loc` (default `entropy`)
+* `--sort complexity|loc` (default `complexity`)
 * `--depth <n>` (directory: limit child listing; default unlimited)
 * `--no-suggest` (hide suggestions)
 
@@ -335,7 +336,7 @@ Flags:
 * **v0.1 (this spec)**: CLI core complete, fast & stable.
 * **v0.2**: MCP server parity; CI examples for LLM integration.
 * **v0.3**: Optional server + SPA; later WebSocket & graph viz.
-* **v0.4+**: Function call graph, multi-language adapters, time-series entropy, refactor simulation.
+* **v0.4+**: Function call graph, multi-language adapters, time-series complexity analysis, refactor simulation, information-theoretic entropy metrics.
 
 ---
 
