@@ -1,9 +1,9 @@
 use crate::cli::{OutputFormat, ViewArgs};
 use crate::output;
 use anyhow::Result;
-use entrota_adapters::typescript::TypeScriptAdapter;
-use entrota_adapters::LanguageAdapter;
-use entrota_core::Config;
+use codentro_adapters::typescript::TypeScriptAdapter;
+use codentro_adapters::LanguageAdapter;
+use codentro_core::Config;
 use std::fs;
 
 pub fn run(args: ViewArgs) -> Result<()> {
@@ -21,7 +21,7 @@ fn analyze_file(args: &ViewArgs) -> Result<()> {
 
     // Load configuration
     let config_path = args.path.parent().and_then(|p| {
-        let config = p.join(".entrota.toml");
+        let config = p.join(".codentro.toml");
         if config.exists() {
             Some(config)
         } else {

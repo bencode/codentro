@@ -1,6 +1,6 @@
 pub mod typescript;
 
-use entrota_core::types::{ModuleIR, Result};
+use codentro_core::types::{ModuleIR, Result};
 use std::path::Path;
 
 pub trait LanguageAdapter {

@@ -1,17 +1,17 @@
 [package]
-name = "entrota-cli"
+name = "codentro-cli"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "entrota"
+name = "codentro"
 path = "src/main.rs"
 
 [dependencies]
-entrota-core = { path = "../entrota-core" }
-entrota-adapters = { path = "../entrota-adapters" }
+codentro-core = { path = "../codentro-core" }
+codentro-adapters = { path = "../codentro-adapters" }
 anyhow.workspace = true
 clap.workspace = true
 tabled.workspace = true

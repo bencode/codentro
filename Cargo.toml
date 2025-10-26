@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/entrota-core",
-    "crates/entrota-adapters",
-    "crates/entrota-cli",
+    "crates/codentro-core",
+    "crates/codentro-adapters",
+    "crates/codentro-cli",
 ]
 
 [workspace.package]

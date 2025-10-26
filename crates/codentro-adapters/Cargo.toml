@@ -1,12 +1,12 @@
 [package]
-name = "entrota-adapters"
+name = "codentro-adapters"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-entrota-core = { path = "../entrota-core" }
+codentro-core = { path = "../codentro-core" }
 anyhow.workspace = true
 thiserror.workspace = true
 tree-sitter.workspace = true

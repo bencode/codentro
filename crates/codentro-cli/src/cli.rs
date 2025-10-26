@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "entrota")]
+#[command(name = "codentro")]
 #[command(about = "Code structure analysis tool", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
