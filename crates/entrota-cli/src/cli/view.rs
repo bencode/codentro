@@ -3,6 +3,7 @@ use crate::output;
 use anyhow::Result;
 use entrota_adapters::typescript::TypeScriptAdapter;
 use entrota_adapters::LanguageAdapter;
+use entrota_core::Config;
 use std::fs;
 
 pub fn run(args: ViewArgs) -> Result<()> {
@@ -18,9 +19,33 @@ pub fn run(args: ViewArgs) -> Result<()> {
 fn analyze_file(args: &ViewArgs) -> Result<()> {
     let source = fs::read_to_string(&args.path)?;
 
-    let adapter = TypeScriptAdapter::new_typescript()?;
-    let module = adapter.parse(&args.path, &source)?;
+    // Load configuration
+    let config_path = args.path.parent().and_then(|p| {
+        let config = p.join(".entrota.toml");
+        if config.exists() {
+            Some(config)
+        } else {
+            None
+        }
+    });
+    let config = Config::load_or_default(config_path.as_deref());
+    let registry = config.to_rule_registry();
 
+    // Parse the file
+    let adapter = TypeScriptAdapter::new_typescript()?;
+    let mut module = adapter.parse(&args.path, &source)?;
+
+    // Apply quality rules
+    let module_metrics = registry.check_module(&module);
+    module.metrics = module_metrics;
+
+    // Apply symbol rules
+    for symbol in &mut module.symbols {
+        let symbol_metrics = registry.check_symbol(symbol);
+        symbol.metrics = symbol_metrics;
+    }
+
+    // Output
     match args.format {
         OutputFormat::Json => {
             output::print_module_json(&module)?;

@@ -8,8 +8,10 @@ mod tests {
             path: path.to_string(),
             language: Some("typescript".to_string()),
             loc: 100,
-            complexity: 0.5,
+            comment_lines: 10,
+            blank_lines: 5,
             symbols: vec![],
+            metrics: vec![],
             outgoing: vec![],
             incoming: vec![],
         }

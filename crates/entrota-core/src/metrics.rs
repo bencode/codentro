@@ -86,8 +86,8 @@ pub fn calculate_symbol_complexity(symbol: &Symbol) -> f64 {
 pub fn generate_suggestions(module: &ModuleIR, fan_in: u32, fan_out: u32) -> Vec<String> {
     let mut suggestions = Vec::new();
 
-    if module.complexity > 0.75 {
-        suggestions.push("High complexity detected - consider splitting into smaller modules".to_string());
+    if module.loc > 500 {
+        suggestions.push("Large file detected - consider splitting into smaller modules".to_string());
     }
 
     if fan_out > 10 {
@@ -99,14 +99,13 @@ pub fn generate_suggestions(module: &ModuleIR, fan_in: u32, fan_out: u32) -> Vec
     }
 
     for symbol in &module.symbols {
-        if let Some(complexity) = symbol.complexity {
-            if complexity > 0.8 && symbol.loc > 50 {
-                suggestions.push(format!(
-                    "Split or isolate complex {} '{}'",
-                    format!("{:?}", symbol.kind).to_lowercase(),
-                    symbol.name
-                ));
-            }
+        if symbol.loc > 80 {
+            suggestions.push(format!(
+                "Large {} '{}' ({} LOC) - consider splitting",
+                format!("{:?}", symbol.kind).to_lowercase(),
+                symbol.name,
+                symbol.loc
+            ));
         }
     }
 

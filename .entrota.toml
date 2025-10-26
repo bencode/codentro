@@ -1,0 +1,27 @@
+# Entrota Configuration File
+# This file allows you to customize quality metrics and thresholds
+
+[rules]
+# Maximum lines of code per file
+max_file_loc = 300
+
+# Maximum lines of code per function
+max_function_loc = 40
+
+# Maximum number of functions per file
+max_functions_per_file = 20
+
+# Maximum number of type definitions per file (interface + type + enum)
+max_types_per_file = 30
+
+# Maximum fan-out (number of dependencies)
+max_fan_out = 7
+
+# Maximum number of imports
+max_imports = 15
+
+[rules.severity]
+# Severity levels: "Info", "Warning", "Error"
+max_file_loc = "Warning"
+max_function_loc = "Warning"
+max_fan_out = "Warning"

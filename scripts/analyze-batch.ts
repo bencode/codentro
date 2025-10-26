@@ -4,16 +4,26 @@ import { readdirSync, statSync, writeFileSync } from 'fs';
 import { join, relative } from 'path';
 import { execSync } from 'child_process';
 
+interface QualityMetric {
+  name: string;
+  value: number;
+  threshold?: number;
+  severity: 'info' | 'warning' | 'error';
+  message?: string;
+}
+
 interface AnalysisResult {
   path: string;
   loc: number;
-  complexity: number;
+  comment_lines: number;
+  blank_lines: number;
   symbols: Array<{
     kind: string;
     name: string;
     loc: number;
-    complexity: number;
+    metrics: QualityMetric[];
   }>;
+  metrics: QualityMetric[];
   outgoing: Array<{
     target: string;
     relation: string;
@@ -140,62 +150,50 @@ async function main() {
 
 interface Statistics {
   avgLOC: number;
-  avgComplexity: number;
-  complexityDistribution: { range: string; count: number }[];
-  topComplexFiles: Array<{ path: string; complexity: number; loc: number }>;
-  topComplexSymbols: Array<{ file: string; symbol: string; complexity: number; loc: number }>;
-  symbolTypeStats: Record<string, { count: number; avgComplexity: number; avgLOC: number }>;
+  avgCommentLines: number;
+  avgBlankLines: number;
+  largeFilesCount: number;
+  topLargeFiles: Array<{ path: string; loc: number; warnings: number }>;
+  symbolTypeStats: Record<string, { count: number; avgLOC: number; issues: number }>;
+  metricSummary: Record<string, { count: number; avgValue: number; violations: number }>;
 }
 
 function calculateStatistics(results: AnalysisResult[]): Statistics {
   const totalLOC = results.reduce((sum, r) => sum + r.loc, 0);
-  const totalComplexity = results.reduce((sum, r) => sum + r.complexity, 0);
+  const totalComment = results.reduce((sum, r) => sum + r.comment_lines, 0);
+  const totalBlank = results.reduce((sum, r) => sum + r.blank_lines, 0);
 
-  // 复杂度分布
-  const ranges = [
-    { range: '0.0-0.2', min: 0, max: 0.2 },
-    { range: '0.2-0.4', min: 0.2, max: 0.4 },
-    { range: '0.4-0.6', min: 0.4, max: 0.6 },
-    { range: '0.6-0.8', min: 0.6, max: 0.8 },
-    { range: '0.8-1.0', min: 0.8, max: 1.0 },
-  ];
-
-  const distribution = ranges.map(({ range, min, max }) => ({
-    range,
-    count: results.filter((r) => r.complexity >= min && r.complexity < max).length,
-  }));
-
-  // Top 复杂文件
-  const topComplexFiles = results
-    .map((r) => ({ path: r.path, complexity: r.complexity, loc: r.loc }))
-    .sort((a, b) => b.complexity - a.complexity)
-    .slice(0, 10);
-
-  // Top 复杂符号
-  const allSymbols = results.flatMap((r) =>
-    r.symbols.map((s) => ({
-      file: r.path,
-      symbol: `${s.kind}:${s.name}`,
-      complexity: s.complexity || 0,
-      loc: s.loc,
-    }))
+  // Count files with warnings
+  const filesWithWarnings = results.filter(
+    (r) => r.metrics.some((m) => m.severity === 'warning' || m.severity === 'error')
   );
 
-  const topComplexSymbols = allSymbols
-    .sort((a, b) => b.complexity - a.complexity)
-    .slice(0, 20);
+  // Top large files
+  const topLargeFiles = results
+    .map((r) => ({
+      path: r.path,
+      loc: r.loc,
+      warnings: r.metrics.filter((m) => m.severity === 'warning' || m.severity === 'error').length,
+    }))
+    .sort((a, b) => b.loc - a.loc)
+    .slice(0, 10);
 
-  // 按符号类型统计
-  const symbolTypeStats: Record<string, { count: number; totalComplexity: number; totalLOC: number }> = {};
+  // Symbol type stats
+  const symbolTypeStats: Record<string, { count: number; totalLOC: number; issues: number }> = {};
 
   for (const result of results) {
     for (const symbol of result.symbols) {
       if (!symbolTypeStats[symbol.kind]) {
-        symbolTypeStats[symbol.kind] = { count: 0, totalComplexity: 0, totalLOC: 0 };
+        symbolTypeStats[symbol.kind] = { count: 0, totalLOC: 0, issues: 0 };
       }
       symbolTypeStats[symbol.kind].count++;
-      symbolTypeStats[symbol.kind].totalComplexity += symbol.complexity || 0;
       symbolTypeStats[symbol.kind].totalLOC += symbol.loc;
+      const hasIssues = symbol.metrics.some(
+        (m) => m.severity === 'warning' || m.severity === 'error'
+      );
+      if (hasIssues) {
+        symbolTypeStats[symbol.kind].issues++;
+      }
     }
   }
 
@@ -204,19 +202,47 @@ function calculateStatistics(results: AnalysisResult[]): Statistics {
       kind,
       {
         count: stats.count,
-        avgComplexity: stats.totalComplexity / stats.count,
         avgLOC: stats.totalLOC / stats.count,
+        issues: stats.issues,
+      },
+    ])
+  );
+
+  // Metric summary
+  const metricSummary: Record<string, { count: number; totalValue: number; violations: number }> = {};
+
+  for (const result of results) {
+    for (const metric of result.metrics) {
+      if (!metricSummary[metric.name]) {
+        metricSummary[metric.name] = { count: 0, totalValue: 0, violations: 0 };
+      }
+      metricSummary[metric.name].count++;
+      metricSummary[metric.name].totalValue += metric.value;
+      if (metric.severity === 'warning' || metric.severity === 'error') {
+        metricSummary[metric.name].violations++;
+      }
+    }
+  }
+
+  const metricSummaryFormatted = Object.fromEntries(
+    Object.entries(metricSummary).map(([name, stats]) => [
+      name,
+      {
+        count: stats.count,
+        avgValue: stats.totalValue / stats.count,
+        violations: stats.violations,
       },
     ])
   );
 
   return {
     avgLOC: totalLOC / results.length,
-    avgComplexity: totalComplexity / results.length,
-    complexityDistribution: distribution,
-    topComplexFiles,
-    topComplexSymbols,
+    avgCommentLines: totalComment / results.length,
+    avgBlankLines: totalBlank / results.length,
+    largeFilesCount: filesWithWarnings.length,
+    topLargeFiles,
     symbolTypeStats: symbolTypeStatsFormatted,
+    metricSummary: metricSummaryFormatted,
   };
 }
 
@@ -225,68 +251,105 @@ function printStatistics(stats: Statistics, batch: BatchResult) {
   console.log('─'.repeat(60));
   console.log(`  Total files analyzed: ${batch.analyzedFiles}`);
   console.log(`  Failed files: ${batch.failedFiles}`);
+  console.log(`  Files with warnings: ${stats.largeFilesCount}`);
   console.log(`  Average LOC per file: ${stats.avgLOC.toFixed(1)}`);
-  console.log(`  Average complexity: ${stats.avgComplexity.toFixed(3)}`);
+  console.log(`  Average comment lines: ${stats.avgCommentLines.toFixed(1)}`);
+  console.log(`  Average blank lines: ${stats.avgBlankLines.toFixed(1)}`);
   console.log('');
 
-  console.log('📊 Complexity Distribution:');
-  stats.complexityDistribution.forEach(({ range, count }) => {
-    const bar = '█'.repeat(Math.floor((count / batch.analyzedFiles) * 50));
-    const percentage = ((count / batch.analyzedFiles) * 100).toFixed(1);
-    console.log(`  ${range}: ${bar} ${count} (${percentage}%)`);
-  });
+  console.log('📊 Quality Metrics Summary:');
+  console.log('  Metric'.padEnd(30) + 'Avg Value'.padEnd(15) + 'Violations');
+  console.log('  ' + '─'.repeat(55));
+  Object.entries(stats.metricSummary)
+    .sort((a, b) => b[1].violations - a[1].violations)
+    .forEach(([name, stat]) => {
+      console.log(
+        `  ${name.padEnd(30)}${stat.avgValue.toFixed(1).padEnd(15)}${stat.violations}`
+      );
+    });
   console.log('');
 
-  console.log('🔥 Top 10 Most Complex Files:');
-  stats.topComplexFiles.forEach((file, idx) => {
-    console.log(`  ${idx + 1}. ${file.path}`);
-    console.log(`     Complexity: ${file.complexity.toFixed(3)}, LOC: ${file.loc}`);
+  console.log('🔥 Top 10 Largest Files:');
+  stats.topLargeFiles.forEach((file, idx) => {
+    const warningIcon = file.warnings > 0 ? '⚠' : ' ';
+    console.log(`  ${idx + 1}. ${warningIcon} ${file.path}`);
+    console.log(`     LOC: ${file.loc}, Warnings: ${file.warnings}`);
   });
   console.log('');
 
   console.log('🎯 Symbol Type Statistics:');
-  console.log('  Type'.padEnd(15) + 'Count'.padEnd(10) + 'Avg Complexity'.padEnd(18) + 'Avg LOC');
+  console.log('  Type'.padEnd(15) + 'Count'.padEnd(10) + 'Avg LOC'.padEnd(12) + 'Issues');
   console.log('  ' + '─'.repeat(50));
   Object.entries(stats.symbolTypeStats)
     .sort((a, b) => b[1].count - a[1].count)
     .forEach(([kind, stat]) => {
       console.log(
-        `  ${kind.padEnd(15)}${String(stat.count).padEnd(10)}${stat.avgComplexity.toFixed(3).padEnd(18)}${stat.avgLOC.toFixed(1)}`
+        `  ${kind.padEnd(15)}${String(stat.count).padEnd(10)}${stat.avgLOC.toFixed(1).padEnd(12)}${stat.issues}`
       );
     });
 }
 
 function generateCSVReport(results: AnalysisResult[]) {
   const rows = [
-    ['File', 'LOC', 'Complexity', 'Symbols', 'Dependencies'].join(','),
+    ['File', 'LOC', 'Comment', 'Blank', 'Symbols', 'Dependencies', 'Warnings'].join(','),
   ];
 
   for (const result of results) {
+    const warnings = result.metrics.filter(
+      (m) => m.severity === 'warning' || m.severity === 'error'
+    ).length;
+
     rows.push(
       [
         `"${result.path}"`,
         result.loc,
-        result.complexity.toFixed(3),
+        result.comment_lines,
+        result.blank_lines,
         result.symbols.length,
         result.outgoing.length,
+        warnings,
       ].join(',')
     );
   }
 
-  // 符号级别的 CSV
+  // Symbol-level CSV
   const symbolRows = [
-    ['File', 'Symbol Type', 'Symbol Name', 'LOC', 'Complexity'].join(','),
+    ['File', 'Symbol Type', 'Symbol Name', 'LOC', 'Issues'].join(','),
   ];
 
   for (const result of results) {
     for (const symbol of result.symbols) {
+      const issues = symbol.metrics.filter(
+        (m) => m.severity === 'warning' || m.severity === 'error'
+      ).length;
+
       symbolRows.push(
         [
           `"${result.path}"`,
           symbol.kind,
           `"${symbol.name}"`,
           symbol.loc,
-          (symbol.complexity || 0).toFixed(3),
+          issues,
+        ].join(',')
+      );
+    }
+  }
+
+  // Metrics CSV
+  const metricRows = [
+    ['File', 'Metric Name', 'Value', 'Threshold', 'Severity', 'Message'].join(','),
+  ];
+
+  for (const result of results) {
+    for (const metric of result.metrics) {
+      metricRows.push(
+        [
+          `"${result.path}"`,
+          metric.name,
+          metric.value.toFixed(1),
+          metric.threshold?.toFixed(1) || '-',
+          metric.severity,
+          `"${metric.message || ''}"`,
         ].join(',')
       );
     }
@@ -294,10 +357,12 @@ function generateCSVReport(results: AnalysisResult[]) {
 
   writeFileSync('analysis-files.csv', rows.join('\n'));
   writeFileSync('analysis-symbols.csv', symbolRows.join('\n'));
+  writeFileSync('analysis-metrics.csv', metricRows.join('\n'));
 
   console.log('\n📄 CSV reports generated:');
   console.log('  - analysis-files.csv');
   console.log('  - analysis-symbols.csv');
+  console.log('  - analysis-metrics.csv');
 }
 
 main().catch((error) => {

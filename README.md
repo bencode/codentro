@@ -4,12 +4,13 @@ Code structure analysis tool for understanding complexity and dependencies.
 
 ## Overview
 
-Entrota analyzes code structure using Tree-sitter to extract meaningful insights about:
+Entrota analyzes code structure using Tree-sitter to provide multi-dimensional quality metrics:
 
 - **Symbols**: Classes, functions, interfaces, types, and enums
-- **Metrics**: Lines of code (LOC) and complexity score
-- **Dependencies**: Import relationships and coupling strength
-- **Suggestions**: Actionable refactoring recommendations
+- **Code Size**: LOC, comment lines, and blank lines
+- **Structure Metrics**: Function count, class count, type definitions
+- **Coupling Metrics**: Fan-in, fan-out, and import count
+- **Quality Rules**: Configurable thresholds with severity levels
 
 ## Current Status: v0.1 (CLI-only)
 
@@ -39,7 +40,7 @@ entrota view <path> [options]
 
 **Options:**
 - `--format <table|json|md>` - Output format (default: table)
-- `--sort <entropy|loc>` - Sort symbols by complexity or LOC (default: entropy)
+- `--sort <loc>` - Sort symbols by LOC (default: loc)
 - `--depth <N>` - Maximum depth for directory traversal
 - `--no-suggest` - Hide refactoring suggestions
 
@@ -59,22 +60,26 @@ entrota view src/
 **Sample output (table format):**
 
 ```
-Target: src/core/graph.ts (lang=Some("typescript"), LOC=85, Complexity=0.62)
+Target: src/core/graph.ts (typescript, 85 LOC, 12 comment, 5 blank)
+
+[Quality Metrics]
+Category     Metric                    Value      Threshold  Status
+---------------------------------------------------------------------------
+Size         file_loc                  85         300        ✓
+Structure    function_count            2          20         ✓
+Coupling     fan_out                   1          7          ✓
 
 [Structure]
-Type         Name                      LOC    Complexity
------------- ------------------------- ------ ----------
-class        GraphBuilder              45     0.58
-function     buildGraph                20     0.65
-function     computeComplexity         15     0.71
+Type         Name                      LOC    Issues
+--------------------------------------------------------------------------------
+class        GraphBuilder              45
+function     buildGraph                20
+function     computeComplexity         50     ⚠ function size
 
 [Outgoing]
 Target                        Relation     Strength
 ----------------------------- ------------ --------
 src/utils/math.ts             import       0.70
-
-[Metrics]
-LOC=85 · Complexity=0.62
 ```
 
 ### Scan & Cache
@@ -102,20 +107,49 @@ Entrota follows a clean, modular architecture:
 
 ### Key Concepts
 
-**Complexity Score**: A normalized metric (0.0 to 1.0) combining:
-- Symbol density (symbols per LOC)
-- Average symbol size
-- Nesting depth (future)
-- Coupling metrics (future)
+**Multi-dimensional Quality Metrics**: Instead of a single complexity score, Entrota provides multiple independent metrics:
 
-Higher complexity suggests code that may benefit from refactoring.
+**Size Metrics**:
+- `file_loc`: Code lines (excluding comments and blanks)
+- `comment_lines`: Comment line count
+- `blank_lines`: Empty line count
 
-Note: This is not Shannon entropy, but a custom complexity measure. Future versions may include actual information-theoretic entropy for specific analyses.
+**Structure Metrics**:
+- `function_count`: Number of functions
+- `class_count`: Number of classes
+- `type_definition_count`: Number of types/interfaces/enums
+- `large_function_count`: Functions exceeding size threshold
+
+**Coupling Metrics**:
+- `fan_out`: Number of dependencies (imports)
+- `fan_in`: Number of dependents
+- `import_count`: Total import statements
+
+**Quality Rules**: Each metric has a configurable threshold and severity level (Info/Warning/Error).
 
 **Dependency Graph**: Files and their import relationships, enabling:
 - Fan-in/fan-out analysis
 - Circular dependency detection (future)
 - Impact analysis (future)
+
+### Configuration
+
+Create a `.entrota.toml` file to customize thresholds:
+
+```toml
+[rules]
+max_file_loc = 300
+max_function_loc = 40
+max_functions_per_file = 20
+max_types_per_file = 30
+max_fan_out = 7
+max_imports = 15
+
+[rules.severity]
+max_file_loc = "Warning"
+max_function_loc = "Warning"
+max_fan_out = "Warning"
+```
 
 ## Development
 

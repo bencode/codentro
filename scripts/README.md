@@ -2,47 +2,52 @@
 
 ## Batch Analysis Tool
 
-批量分析 TypeScript 项目的工具，用于收集真实数据验证复杂度算法。
+A tool for batch analyzing TypeScript projects to collect real-world data for validating quality metrics.
 
-### 使用方法
+### Usage
 
 ```bash
-# 1. 确保已构建 entrota
+# 1. Build entrota
 cargo build --release
 
-# 2. 安装 bun (如果还没有)
+# 2. Install bun (if not already installed)
 curl -fsSL https://bun.sh/install | bash
 
-# 3. 运行批量分析
+# 3. Run batch analysis
 bun scripts/analyze-batch.ts /path/to/target/directory
 
-# 例如：分析 material-ui packages
+# Example: analyze material-ui packages
 bun scripts/analyze-batch.ts /Users/bencode/work/trantor/material-ui/packages
 ```
 
-### 输出
+### Output
 
-脚本会生成三个文件：
+The script generates four files:
 
-1. **analysis-results.json** - 完整的 JSON 结果
-   - 包含所有文件的详细分析
-   - 错误信息
-   - 统计数据
+1. **analysis-results.json** - Complete JSON results
+   - Detailed analysis of all files
+   - Quality metrics
+   - Error information
+   - Statistics
 
-2. **analysis-files.csv** - 文件级别汇总
-   - 列：File, LOC, Complexity, Symbols, Dependencies
+2. **analysis-files.csv** - File-level summary
+   - Columns: File, LOC, Comment, Blank, Symbols, Dependencies, Warnings
 
-3. **analysis-symbols.csv** - 符号级别详情
-   - 列：File, Symbol Type, Symbol Name, LOC, Complexity
+3. **analysis-symbols.csv** - Symbol-level details
+   - Columns: File, Symbol Type, Symbol Name, LOC, Issues
 
-### 统计报告
+4. **analysis-metrics.csv** - Quality metrics details
+   - Columns: File, Metric Name, Value, Threshold, Severity, Message
 
-终端会显示：
-- 复杂度分布直方图
-- Top 10 最复杂文件
-- 按符号类型的统计（平均复杂度、平均 LOC）
+### Statistics Report
 
-### 示例输出
+The terminal displays:
+- File statistics (total, failed, warnings)
+- Quality metrics summary (average value, violations)
+- Top 10 largest files
+- Symbol type statistics (average LOC, issues)
+
+### Sample Output
 
 ```
 🔍 Finding TypeScript files in: /path/to/packages
@@ -56,41 +61,44 @@ bun scripts/analyze-batch.ts /Users/bencode/work/trantor/material-ui/packages
 ────────────────────────────────────────────────────────────
   Total files analyzed: 520
   Failed files: 3
+  Files with warnings: 45
   Average LOC per file: 145.3
-  Average complexity: 0.234
+  Average comment lines: 12.5
+  Average blank lines: 8.2
 
-📊 Complexity Distribution:
-  0.0-0.2: ████████████████████ 210 (40.4%)
-  0.2-0.4: ████████████████ 165 (31.7%)
-  0.4-0.6: ████████ 85 (16.3%)
-  0.6-0.8: ████ 45 (8.7%)
-  0.8-1.0: ██ 15 (2.9%)
+📊 Quality Metrics Summary:
+  Metric                        Avg Value       Violations
+  ───────────────────────────────────────────────────────
+  large_function_count          1.2             32
+  file_loc                      145.3           15
+  function_count                8.5             5
+  fan_out                       3.2             2
 
-🔥 Top 10 Most Complex Files:
-  1. src/components/DataGrid/DataGrid.tsx
-     Complexity: 0.847, LOC: 1250
+🔥 Top 10 Largest Files:
+  1. ⚠ src/components/DataGrid/DataGrid.tsx
+     LOC: 1250, Warnings: 3
   ...
 
 🎯 Symbol Type Statistics:
-  Type           Count     Avg Complexity    Avg LOC
-  ──────────────────────────────────────────────────
-  function       2341      0.345             28.5
-  class          156       0.523             125.3
-  interface      892       0.187             8.2
-  type           1456      0.156             5.1
+  Type           Count     Avg LOC     Issues
+  ──────────────────────────────────────────
+  function       2341      28.5        156
+  class          156       125.3       12
+  interface      892       8.2         0
+  type           1456      5.1         0
   ...
 ```
 
-### 数据分析
+### Data Analysis
 
-生成的 CSV 文件可以导入 Excel/Google Sheets 进行进一步分析：
-- 绘制复杂度与 LOC 的散点图
-- 分析不同符号类型的复杂度分布
-- 识别需要重构的候选文件
+The generated CSV files can be imported into Excel/Google Sheets for further analysis:
+- Plot LOC vs warning count scatter charts
+- Analyze metric distributions across different symbol types
+- Identify refactoring candidates based on multiple quality dimensions
 
-### 自定义 entrota 路径
+### Custom entrota Path
 
-如果 entrota 不在默认位置：
+If entrota is not at the default location:
 
 ```bash
 bun scripts/analyze-batch.ts /path/to/packages ./path/to/entrota

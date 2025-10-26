@@ -16,3 +16,7 @@ Cargo.lock
 coverage/
 *.profraw
 *.profdata
+
+# Analysis outputs
+analysis-*.csv
+analysis-*.json
