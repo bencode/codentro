@@ -1,6 +1,5 @@
 # 🧩 Entrota — Design Specification (Phased)
 
-**Author:** Qijun & GPT-5 Thinking
 **Language:** Rust (core & CLI) · TypeScript (only for future front-end)
 **Core Principle:** **Core-first.** Everything is implementable and useful from the CLI alone.
 
