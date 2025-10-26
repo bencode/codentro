@@ -1,0 +1,115 @@
+use crate::types::{ModuleIR, Symbol};
+
+#[derive(Debug, Default)]
+pub struct LOCStats {
+    pub code: u32,
+    pub comment: u32,
+    pub blank: u32,
+}
+
+impl LOCStats {
+    pub fn total(&self) -> u32 {
+        self.code + self.comment + self.blank
+    }
+}
+
+pub fn count_lines(source: &str) -> LOCStats {
+    let mut stats = LOCStats::default();
+    let mut in_block_comment = false;
+
+    for line in source.lines() {
+        let trimmed = line.trim();
+
+        if trimmed.is_empty() {
+            stats.blank += 1;
+            continue;
+        }
+
+        if trimmed.starts_with("/*") {
+            in_block_comment = true;
+        }
+
+        if in_block_comment {
+            stats.comment += 1;
+            if trimmed.ends_with("*/") {
+                in_block_comment = false;
+            }
+            continue;
+        }
+
+        if trimmed.starts_with("//") {
+            stats.comment += 1;
+        } else {
+            stats.code += 1;
+        }
+    }
+
+    stats
+}
+
+pub fn calculate_entropy(module: &ModuleIR) -> f64 {
+    let symbol_count = module.symbols.len() as f64;
+    let loc = module.loc as f64;
+
+    if loc == 0.0 {
+        return 0.0;
+    }
+
+    let symbol_density = (symbol_count / loc).min(1.0);
+    let avg_symbol_size = if symbol_count > 0.0 {
+        loc / symbol_count
+    } else {
+        0.0
+    };
+
+    let size_entropy = if avg_symbol_size > 0.0 {
+        1.0 - (1.0 / (1.0 + avg_symbol_size / 50.0))
+    } else {
+        0.0
+    };
+
+    (symbol_density * 0.4 + size_entropy * 0.6).clamp(0.0, 1.0)
+}
+
+pub fn calculate_symbol_entropy(symbol: &Symbol) -> f64 {
+    let loc = symbol.loc as f64;
+    if loc == 0.0 {
+        return 0.0;
+    }
+
+    (1.0 - (1.0 / (1.0 + loc / 30.0))).clamp(0.0, 1.0)
+}
+
+pub fn generate_suggestions(module: &ModuleIR, fan_in: u32, fan_out: u32) -> Vec<String> {
+    let mut suggestions = Vec::new();
+
+    if module.entropy > 0.75 {
+        suggestions.push("High entropy detected - consider splitting into smaller modules".to_string());
+    }
+
+    if fan_out > 10 {
+        suggestions.push(format!("High fan-out ({}) - consider reducing dependencies", fan_out));
+    }
+
+    if fan_in > 10 {
+        suggestions.push(format!("High fan-in ({}) - consider extracting shared utilities", fan_in));
+    }
+
+    for symbol in &module.symbols {
+        if let Some(entropy) = symbol.entropy {
+            if entropy > 0.8 && symbol.loc > 50 {
+                suggestions.push(format!(
+                    "Split or isolate high-entropy {} '{}'",
+                    format!("{:?}", symbol.kind).to_lowercase(),
+                    symbol.name
+                ));
+            }
+        }
+    }
+
+    suggestions
+}
+
+#[cfg(test)]
+#[path = "metrics_test.rs"]
+mod metrics_test;

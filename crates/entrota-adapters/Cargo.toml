@@ -1,0 +1,14 @@
+[package]
+name = "entrota-adapters"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+entrota-core = { path = "../entrota-core" }
+anyhow.workspace = true
+thiserror.workspace = true
+tree-sitter.workspace = true
+tree-sitter-typescript.workspace = true
+tree-sitter-javascript.workspace = true
