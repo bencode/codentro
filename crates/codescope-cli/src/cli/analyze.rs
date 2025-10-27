@@ -91,7 +91,18 @@ fn analyze_file(path: &PathBuf, args: &AnalyzeArgs) -> Result<()> {
 
 fn analyze_directory(path: &PathBuf, args: &AnalyzeArgs) -> Result<()> {
     use std::fs;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
     use walkdir::WalkDir;
+
+    // Setup Ctrl+C handler
+    let interrupted = Arc::new(AtomicBool::new(false));
+    let interrupted_clone = interrupted.clone();
+
+    ctrlc::set_handler(move || {
+        interrupted_clone.store(true, Ordering::SeqCst);
+        eprintln!("\n\n⚠ Interrupted by user. Showing results for analyzed files...\n");
+    }).expect("Error setting Ctrl-C handler");
 
     // Collect TypeScript/JavaScript files
     let max_depth = args.max_depth.unwrap_or(usize::MAX);
@@ -120,7 +131,7 @@ fn analyze_directory(path: &PathBuf, args: &AnalyzeArgs) -> Result<()> {
     }
 
     println!("Found {} TypeScript/JavaScript files", ts_files.len());
-    println!();
+    println!("Press Ctrl+C to stop and show results\n");
 
     // Load configuration
     let config_path = args.config.clone().or_else(|| {
@@ -134,15 +145,19 @@ fn analyze_directory(path: &PathBuf, args: &AnalyzeArgs) -> Result<()> {
     let config = Config::load_or_default(config_path.as_deref());
     let registry = config.to_rule_registry();
 
-    // Analyze each file
+    // Analyze each file with streaming output
     let adapter = TypeScriptAdapter::new_typescript()?;
     let mut all_modules = Vec::new();
     let mut error_count = 0;
+    let mut files_with_issues_count = 0;
 
     for (i, file_path) in ts_files.iter().enumerate() {
-        if (i + 1) % 10 == 0 || i + 1 == ts_files.len() {
-            eprint!("\rAnalyzing... {}/{}", i + 1, ts_files.len());
+        // Check for interruption
+        if interrupted.load(Ordering::SeqCst) {
+            break;
         }
+
+        eprint!("\r[{}/{}] Analyzing...", i + 1, ts_files.len());
 
         match fs::read_to_string(file_path) {
             Ok(source) => {
@@ -158,6 +173,21 @@ fn analyze_directory(path: &PathBuf, args: &AnalyzeArgs) -> Result<()> {
                             symbol.metrics = symbol_metrics;
                         }
 
+                        // Check if file has issues
+                        let has_issues = module.metrics.iter().any(|m| {
+                            matches!(m.severity, Severity::Warning | Severity::Error)
+                        });
+
+                        if has_issues {
+                            files_with_issues_count += 1;
+
+                            // Clear progress line
+                            eprint!("\r{}\r", " ".repeat(50));
+
+                            // Print file with issues immediately
+                            print_file_issues(&module);
+                        }
+
                         all_modules.push(module);
                     }
                     Err(_) => {
@@ -171,13 +201,38 @@ fn analyze_directory(path: &PathBuf, args: &AnalyzeArgs) -> Result<()> {
         }
     }
 
-    eprintln!("\r✓ Analyzed {} files ({} errors)", all_modules.len(), error_count);
+    eprintln!("\r{}\r", " ".repeat(50));
+    eprintln!("✓ Analyzed {} files ({} with issues, {} errors)",
+        all_modules.len(), files_with_issues_count, error_count);
     println!();
 
-    // Aggregate statistics
+    // Show summary
     print_directory_summary(&all_modules, args)?;
 
     Ok(())
+}
+
+fn print_file_issues(module: &ModuleIR) {
+    let issues: Vec<_> = module
+        .metrics
+        .iter()
+        .filter(|m| matches!(m.severity, Severity::Warning | Severity::Error))
+        .collect();
+
+    if issues.is_empty() {
+        return;
+    }
+
+    println!("⚠ {} (LOC: {})", module.path, module.loc);
+    for issue in issues {
+        let icon = match issue.severity {
+            Severity::Error => "  ✗",
+            Severity::Warning => "  ⚠",
+            Severity::Info => "  ℹ",
+        };
+        println!("{} {}", icon, issue.message.as_deref().unwrap_or(&issue.name));
+    }
+    println!();
 }
 
 fn print_directory_summary(modules: &[ModuleIR], args: &AnalyzeArgs) -> Result<()> {
@@ -195,6 +250,19 @@ fn print_directory_summary(modules: &[ModuleIR], args: &AnalyzeArgs) -> Result<(
         })
         .collect();
 
+    // Calculate total issues by type
+    let mut total_warnings = 0;
+    let mut total_errors = 0;
+    for module in modules {
+        for metric in &module.metrics {
+            match metric.severity {
+                Severity::Warning => total_warnings += 1,
+                Severity::Error => total_errors += 1,
+                _ => {}
+            }
+        }
+    }
+
     println!("📊 Summary");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("  Total files:        {}", total_files);
@@ -204,43 +272,11 @@ fn print_directory_summary(modules: &[ModuleIR], args: &AnalyzeArgs) -> Result<(
         files_with_issues.len(),
         if total_files > 0 { files_with_issues.len() as f64 / total_files as f64 * 100.0 } else { 0.0 }
     );
-    println!();
-
-    if !files_with_issues.is_empty() {
-        println!("⚠  Files with Quality Issues");
-        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-        let mut sorted_files = files_with_issues.clone();
-        sorted_files.sort_by(|a, b| {
-            let a_issues = a.metrics.iter().filter(|m| matches!(m.severity, Severity::Warning | Severity::Error)).count();
-            let b_issues = b.metrics.iter().filter(|m| matches!(m.severity, Severity::Warning | Severity::Error)).count();
-            b_issues.cmp(&a_issues)
-        });
-
-        let display_limit = 20;
-        for (i, module) in sorted_files.iter().take(display_limit).enumerate() {
-            let issues: Vec<_> = module
-                .metrics
-                .iter()
-                .filter(|m| matches!(m.severity, Severity::Warning | Severity::Error))
-                .collect();
-
-            println!("{}. {} (LOC: {})", i + 1, module.path, module.loc);
-            for issue in issues {
-                let icon = match issue.severity {
-                    Severity::Error => "✗",
-                    Severity::Warning => "⚠",
-                    Severity::Info => "ℹ",
-                };
-                println!("   {} {}", icon, issue.message.as_deref().unwrap_or(&issue.name));
-            }
-        }
-
-        if sorted_files.len() > display_limit {
-            println!();
-            println!("... and {} more files with issues", sorted_files.len() - display_limit);
-        }
+    if total_warnings > 0 || total_errors > 0 {
+        println!("  Total warnings:     {}", total_warnings);
+        println!("  Total errors:       {}", total_errors);
     }
+    println!();
 
     // Output to file if requested
     if let Some(output_path) = &args.output {
