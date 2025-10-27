@@ -108,10 +108,41 @@ fn analyze_directory(path: &PathBuf, args: &AnalyzeArgs) -> Result<()> {
     let max_depth = args.max_depth.unwrap_or(usize::MAX);
     let mut ts_files = Vec::new();
 
+    // Default ignore patterns
+    let ignore_dirs = [
+        "node_modules",
+        "dist",
+        "build",
+        ".git",
+        ".vite",
+        "deps",
+        "deps_temp",
+        "vendor",
+        "target",
+        ".next",
+        ".nuxt",
+        "out",
+        "coverage",
+        ".cache",
+    ];
+
+    let include_ignored = args.include_ignored;
+
     for entry in WalkDir::new(path)
         .max_depth(max_depth)
         .follow_links(false)
         .into_iter()
+        .filter_entry(move |e| {
+            // Skip ignored directories unless --include-ignored is set
+            if include_ignored {
+                true
+            } else if e.file_type().is_dir() {
+                let dir_name = e.file_name().to_string_lossy();
+                !ignore_dirs.iter().any(|&ignored| dir_name == ignored || dir_name.starts_with('.'))
+            } else {
+                true
+            }
+        })
         .filter_map(|e| e.ok())
     {
         let path = entry.path();

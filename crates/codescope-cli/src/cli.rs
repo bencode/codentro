@@ -39,6 +39,10 @@ pub struct Cli {
     /// Custom config file path
     #[arg(short, long, global = true)]
     pub config: Option<PathBuf>,
+
+    /// Include normally ignored directories (node_modules, dist, etc.)
+    #[arg(long, global = true)]
+    pub include_ignored: bool,
 }
 
 #[derive(Subcommand)]
@@ -78,6 +82,10 @@ pub struct AnalyzeArgs {
     /// Custom config file path
     #[arg(short, long)]
     pub config: Option<PathBuf>,
+
+    /// Include normally ignored directories
+    #[arg(long)]
+    pub include_ignored: bool,
 }
 
 #[derive(Parser)]

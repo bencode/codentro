@@ -25,6 +25,7 @@ fn main() -> Result<()> {
                 no_suggest: cli.no_suggest,
                 sort: Some(cli.sort),
                 config: cli.config,
+                include_ignored: cli.include_ignored,
             };
             cli::analyze::run(args)?;
         }
