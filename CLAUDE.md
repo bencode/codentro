@@ -150,14 +150,20 @@ cargo build --release
 ### CLI Usage
 
 ```bash
-# View file analysis (table format with quality metrics)
-./target/release/codescope view path/to/file.ts
+# Analyze file (default: table format with quality metrics)
+./target/release/codescope path/to/file.ts
 
 # JSON output (matches design doc schema)
-./target/release/codescope view path/to/file.ts --format json
+./target/release/codescope path/to/file.ts -f json
 
 # Markdown output
-./target/release/codescope view path/to/file.ts --format md
+./target/release/codescope path/to/file.ts -f md
+
+# Output to file
+./target/release/codescope path/to/file.ts -o report.json -f json
+
+# Generate config file
+./target/release/codescope init
 ```
 
 ### Batch Analysis

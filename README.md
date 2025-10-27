@@ -32,29 +32,55 @@ The binary will be at `target/release/codescope`.
 
 ## Usage
 
-### View File Analysis
+### Basic Analysis
 
 ```bash
-codescope view <path> [options]
+# Analyze a file or directory (default behavior)
+codescope <path>
+
+# Examples
+codescope src/main.ts
+codescope src/
+codescope .
 ```
 
-**Options:**
-- `--format <table|json|md>` - Output format (default: table)
-- `--sort <loc>` - Sort symbols by LOC (default: loc)
-- `--depth <N>` - Maximum depth for directory traversal
-- `--no-suggest` - Hide refactoring suggestions
-
-**Example:**
+### Output Formats
 
 ```bash
-# Analyze a TypeScript file
-codescope view src/core/graph.ts
+# JSON output
+codescope src/main.ts -f json
 
-# Get JSON output
-codescope view src/core/graph.ts --format json
+# Markdown output
+codescope src/main.ts -f md
 
-# Analyze a directory
-codescope view src/
+# Output to file
+codescope src/ -o report.json -f json
+```
+
+### Configuration
+
+```bash
+# Generate default config file
+codescope init
+
+# Use custom config
+codescope src/ -c custom.toml
+```
+
+### Options
+
+```bash
+codescope [OPTIONS] [PATH]
+
+Options:
+  -f, --format <FORMAT>        Output format: table, json, md [default: table]
+  -o, --output <FILE>          Write output to file
+      --max-depth <N>          Maximum directory depth
+      --no-suggest             Hide refactoring suggestions
+      --sort <FIELD>           Sort by: loc, name, issues [default: loc]
+  -c, --config <FILE>          Custom config file
+  -h, --help                   Print help
+  -V, --version                Print version
 ```
 
 **Sample output (table format):**
@@ -82,17 +108,6 @@ Target                        Relation     Strength
 src/utils/math.ts             import       0.70
 ```
 
-### Scan & Cache
-
-```bash
-codescope scan <path> [options]
-```
-
-**Options:**
-- `--out <file.json>` - Save results to JSON file
-- `--format <table|json>` - Output format if --out not specified
-
-**Note:** Scan functionality is planned but not yet implemented in v0.1.
 
 ## Architecture
 
@@ -169,7 +184,8 @@ cargo clippy
 ### Try the CLI
 
 ```bash
-cargo run -p codescope-cli -- view <path>
+cargo run -p codescope-cli -- <path>
+cargo run -p codescope-cli -- src/main.ts -f json
 ```
 
 ## Roadmap

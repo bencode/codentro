@@ -68,7 +68,7 @@ function findTypeScriptFiles(dir: string, baseDir: string): string[] {
 // 运行 codescope 分析单个文件
 function analyzeFile(filePath: string, codescopeBin: string): AnalysisResult | null {
   try {
-    const output = execSync(`${codescopeBin} view "${filePath}" --format json`, {
+    const output = execSync(`${codescopeBin} "${filePath}" -f json`, {
       encoding: 'utf-8',
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
     });

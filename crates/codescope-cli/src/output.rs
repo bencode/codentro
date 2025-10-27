@@ -145,23 +145,22 @@ fn metric_category(name: &str) -> &str {
     }
 }
 
-pub fn print_module_markdown(module: &ModuleIR, _no_suggest: bool) -> Result<()> {
-    println!("# {}", module.path);
-    println!();
-    println!(
-        "**Language:** {} | **LOC:** {} | **Comment:** {} | **Blank:** {}",
+pub fn format_module_markdown(module: &ModuleIR, _no_suggest: bool) -> Result<String> {
+    let mut output = String::new();
+
+    output.push_str(&format!("# {}\n\n", module.path));
+    output.push_str(&format!(
+        "**Language:** {} | **LOC:** {} | **Comment:** {} | **Blank:** {}\n\n",
         module.language.as_deref().unwrap_or("unknown"),
         module.loc,
         module.comment_lines,
         module.blank_lines
-    );
-    println!();
+    ));
 
     if !module.metrics.is_empty() {
-        println!("## Quality Metrics");
-        println!();
-        println!("| Category | Metric | Value | Threshold | Status |");
-        println!("|----------|--------|-------|-----------|--------|");
+        output.push_str("## Quality Metrics\n\n");
+        output.push_str("| Category | Metric | Value | Threshold | Status |\n");
+        output.push_str("|----------|--------|-------|-----------|--------|\n");
 
         for metric in &module.metrics {
             let category = metric_category(&metric.name);
@@ -176,19 +175,18 @@ pub fn print_module_markdown(module: &ModuleIR, _no_suggest: bool) -> Result<()>
                 .map(|t| format!("{:.0}", t))
                 .unwrap_or_else(|| "-".to_string());
 
-            println!(
-                "| {} | {} | {:.0} | {} | {} |",
+            output.push_str(&format!(
+                "| {} | {} | {:.0} | {} | {} |\n",
                 category, metric.name, metric.value, threshold_str, status_icon
-            );
+            ));
         }
-        println!();
+        output.push('\n');
     }
 
     if !module.symbols.is_empty() {
-        println!("## Structure");
-        println!();
-        println!("| Type | Name | LOC | Issues |");
-        println!("|------|------|-----|--------|");
+        output.push_str("## Structure\n\n");
+        output.push_str("| Type | Name | LOC | Issues |\n");
+        output.push_str("|------|------|-----|--------|\n");
 
         for symbol in &module.symbols {
             let issues: Vec<String> = symbol
@@ -204,16 +202,22 @@ pub fn print_module_markdown(module: &ModuleIR, _no_suggest: bool) -> Result<()>
                 issues.join(", ")
             };
 
-            println!(
-                "| {} | {} | {} | {} |",
+            output.push_str(&format!(
+                "| {} | {} | {} | {} |\n",
                 format!("{:?}", symbol.kind),
                 symbol.name,
                 symbol.loc,
                 issues_str
-            );
+            ));
         }
-        println!();
+        output.push('\n');
     }
 
+    Ok(output)
+}
+
+pub fn print_module_markdown(module: &ModuleIR, no_suggest: bool) -> Result<()> {
+    let output = format_module_markdown(module, no_suggest)?;
+    print!("{}", output);
     Ok(())
 }

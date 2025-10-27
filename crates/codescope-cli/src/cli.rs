@@ -1,5 +1,5 @@
-pub mod view;
-pub mod scan;
+pub mod analyze;
+pub mod init;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -7,53 +7,87 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "codescope")]
 #[command(about = "Code structure analysis tool", long_about = None)]
+#[command(version)]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
+
+    /// Path to file or directory to analyze (default: current directory)
+    #[arg(value_name = "PATH", global = true)]
+    pub path: Option<PathBuf>,
+
+    /// Output format
+    #[arg(short, long, value_enum, global = true, default_value = "table")]
+    pub format: OutputFormat,
+
+    /// Write output to file
+    #[arg(short, long, global = true)]
+    pub output: Option<PathBuf>,
+
+    /// Maximum depth for directory traversal
+    #[arg(long, global = true)]
+    pub max_depth: Option<usize>,
+
+    /// Hide refactoring suggestions
+    #[arg(long, global = true)]
+    pub no_suggest: bool,
+
+    /// Sort symbols by field
+    #[arg(long, value_enum, global = true, default_value = "loc")]
+    pub sort: SortBy,
+
+    /// Custom config file path
+    #[arg(short, long, global = true)]
+    pub config: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// View structure and dependencies of a file or directory
-    View(ViewArgs),
-    /// Scan and cache analysis for a path
-    Scan(ScanArgs),
+    /// Analyze code structure (default when no command specified)
+    Analyze(AnalyzeArgs),
+
+    /// Generate default .codescope.toml config file
+    Init(InitArgs),
 }
 
 #[derive(Parser)]
-pub struct ViewArgs {
+pub struct AnalyzeArgs {
     /// Path to file or directory to analyze
-    pub path: PathBuf,
+    pub path: Option<PathBuf>,
 
     /// Output format
-    #[arg(long, value_enum, default_value = "table")]
-    pub format: OutputFormat,
+    #[arg(short, long, value_enum)]
+    pub format: Option<OutputFormat>,
 
-    /// Sort by entropy or LOC
-    #[arg(long, value_enum, default_value = "entropy")]
-    pub sort: SortBy,
+    /// Write output to file
+    #[arg(short, long)]
+    pub output: Option<PathBuf>,
 
     /// Maximum depth for directory traversal
     #[arg(long)]
-    pub depth: Option<usize>,
+    pub max_depth: Option<usize>,
 
-    /// Hide suggestions
+    /// Hide refactoring suggestions
     #[arg(long)]
     pub no_suggest: bool,
+
+    /// Sort symbols by field
+    #[arg(long, value_enum)]
+    pub sort: Option<SortBy>,
+
+    /// Custom config file path
+    #[arg(short, long)]
+    pub config: Option<PathBuf>,
 }
 
 #[derive(Parser)]
-pub struct ScanArgs {
-    /// Path to scan
-    pub path: PathBuf,
+pub struct InitArgs {
+    /// Directory to create config file in (default: current directory)
+    pub path: Option<PathBuf>,
 
-    /// Output file for JSON results
-    #[arg(long)]
-    pub out: Option<PathBuf>,
-
-    /// Output format (only used if --out is not specified)
-    #[arg(long, value_enum, default_value = "table")]
-    pub format: OutputFormat,
+    /// Overwrite existing config file
+    #[arg(short, long)]
+    pub force: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
@@ -65,6 +99,7 @@ pub enum OutputFormat {
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub enum SortBy {
-    Entropy,
     Loc,
+    Name,
+    Issues,
 }
