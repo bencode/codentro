@@ -1,5 +1,5 @@
 use crate::LanguageAdapter;
-use codentro_core::{
+use codescope_core::{
     metrics::count_lines,
     types::{DepEdge, DepKind, ModuleIR, Result, Symbol, SymbolKind},
 };
@@ -130,7 +130,7 @@ impl LanguageAdapter for TypeScriptAdapter {
 
         let module = ModuleIR {
             path: path.to_string_lossy().to_string(),
-            language: codentro_core::discovery::detect_language(path),
+            language: codescope_core::discovery::detect_language(path),
             loc: loc_stats.code,
             comment_lines: loc_stats.comment,
             blank_lines: loc_stats.blank,

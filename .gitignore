@@ -20,3 +20,6 @@ coverage/
 # Analysis outputs
 analysis-*.csv
 analysis-*.json
+
+# Config files (optional - uncomment if needed)
+# .codescope.toml

@@ -1,6 +1,6 @@
 pub mod typescript;
 
-use codentro_core::types::{ModuleIR, Result};
+use codescope_core::types::{ModuleIR, Result};
 use std::path::Path;
 
 pub trait LanguageAdapter {

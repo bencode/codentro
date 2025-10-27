@@ -1,5 +1,5 @@
 use anyhow::Result;
-use codentro_core::types::{ModuleIR, Severity};
+use codescope_core::types::{ModuleIR, Severity};
 use serde_json;
 
 pub fn print_module_json(module: &ModuleIR) -> Result<()> {

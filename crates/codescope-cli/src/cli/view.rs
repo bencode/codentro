@@ -1,9 +1,9 @@
 use crate::cli::{OutputFormat, ViewArgs};
 use crate::output;
 use anyhow::Result;
-use codentro_adapters::typescript::TypeScriptAdapter;
-use codentro_adapters::LanguageAdapter;
-use codentro_core::Config;
+use codescope_adapters::typescript::TypeScriptAdapter;
+use codescope_adapters::LanguageAdapter;
+use codescope_core::Config;
 use std::fs;
 
 pub fn run(args: ViewArgs) -> Result<()> {
@@ -21,7 +21,7 @@ fn analyze_file(args: &ViewArgs) -> Result<()> {
 
     // Load configuration
     let config_path = args.path.parent().and_then(|p| {
-        let config = p.join(".codentro.toml");
+        let config = p.join(".codescope.toml");
         if config.exists() {
             Some(config)
         } else {

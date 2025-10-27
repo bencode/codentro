@@ -1,10 +1,10 @@
-# Entrota
+# Codescope
 
 Code structure analysis tool for understanding complexity and dependencies.
 
 ## Overview
 
-Entrota analyzes code structure using Tree-sitter to provide multi-dimensional quality metrics:
+Codescope analyzes code structure using Tree-sitter to provide multi-dimensional quality metrics:
 
 - **Symbols**: Classes, functions, interfaces, types, and enums
 - **Code Size**: LOC, comment lines, and blank lines
@@ -19,7 +19,7 @@ This version provides CLI commands for analyzing TypeScript, JavaScript, and TSX
 ## Installation
 
 ```bash
-cargo install --path crates/entrota-cli
+cargo install --path crates/codescope-cli
 ```
 
 Or build from source:
@@ -28,14 +28,14 @@ Or build from source:
 cargo build --release
 ```
 
-The binary will be at `target/release/entrota`.
+The binary will be at `target/release/codescope`.
 
 ## Usage
 
 ### View File Analysis
 
 ```bash
-entrota view <path> [options]
+codescope view <path> [options]
 ```
 
 **Options:**
@@ -48,13 +48,13 @@ entrota view <path> [options]
 
 ```bash
 # Analyze a TypeScript file
-entrota view src/core/graph.ts
+codescope view src/core/graph.ts
 
 # Get JSON output
-entrota view src/core/graph.ts --format json
+codescope view src/core/graph.ts --format json
 
 # Analyze a directory
-entrota view src/
+codescope view src/
 ```
 
 **Sample output (table format):**
@@ -85,7 +85,7 @@ src/utils/math.ts             import       0.70
 ### Scan & Cache
 
 ```bash
-entrota scan <path> [options]
+codescope scan <path> [options]
 ```
 
 **Options:**
@@ -96,18 +96,18 @@ entrota scan <path> [options]
 
 ## Architecture
 
-Entrota follows a clean, modular architecture:
+Codescope follows a clean, modular architecture:
 
 ```
 /crates
-  /entrota-core        # Core engine (AST, IR, graph, metrics)
-  /entrota-adapters    # Language adapters (TypeScript/JS/TSX)
-  /entrota-cli         # CLI interface
+  /codescope-core        # Core engine (AST, IR, graph, metrics)
+  /codescope-adapters    # Language adapters (TypeScript/JS/TSX)
+  /codescope-cli         # CLI interface
 ```
 
 ### Key Concepts
 
-**Multi-dimensional Quality Metrics**: Instead of a single complexity score, Entrota provides multiple independent metrics:
+**Multi-dimensional Quality Metrics**: Instead of a single complexity score, Codescope provides multiple independent metrics:
 
 **Size Metrics**:
 - `file_loc`: Code lines (excluding comments and blanks)
@@ -134,7 +134,7 @@ Entrota follows a clean, modular architecture:
 
 ### Configuration
 
-Create a `.entrota.toml` file to customize thresholds:
+Create a `.codescope.toml` file to customize thresholds:
 
 ```toml
 [rules]
@@ -169,7 +169,7 @@ cargo clippy
 ### Try the CLI
 
 ```bash
-cargo run -p entrota-cli -- view <path>
+cargo run -p codescope-cli -- view <path>
 ```
 
 ## Roadmap

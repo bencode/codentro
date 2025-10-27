@@ -1,8 +1,8 @@
-# Codentro - Project Context
+# Codescope - Project Context
 
 ## Project Overview
 
-Codentro is a code structure analysis tool written in Rust, using Tree-sitter for AST parsing. The project follows a phased development approach with v0.1 focusing on CLI-only functionality.
+Codescope is a code structure analysis tool written in Rust, using Tree-sitter for AST parsing. The project follows a phased development approach with v0.1 focusing on CLI-only functionality.
 
 **Current Version:** v0.1
 **License:** MIT
@@ -14,16 +14,16 @@ Codentro is a code structure analysis tool written in Rust, using Tree-sitter fo
 
 ```
 /crates
-  /codentro-core        # Core engine - NO HTTP/UI deps
-  /codentro-adapters    # Language adapters (TypeScript/JS/TSX)
-  /codentro-cli         # CLI interface (view/scan commands)
+  /codescope-core        # Core engine - NO HTTP/UI deps
+  /codescope-adapters    # Language adapters (TypeScript/JS/TSX)
+  /codescope-cli         # CLI interface (view/scan commands)
 ```
 
-**Key Principle:** `codentro-core` has ZERO dependency on CLI/HTTP/Frontend. This ensures the core can be reused in v0.2 (MCP server) and v0.3 (Web server) without modification.
+**Key Principle:** `codescope-core` has ZERO dependency on CLI/HTTP/Frontend. This ensures the core can be reused in v0.2 (MCP server) and v0.3 (Web server) without modification.
 
 ### Multi-Dimensional Quality Metrics System
 
-**Design Philosophy:** Instead of a single complexity score, Codentro provides **independent, measurable quality metrics** similar to ESLint rules. Each metric represents a distinct code quality dimension.
+**Design Philosophy:** Instead of a single complexity score, Codescope provides **independent, measurable quality metrics** similar to ESLint rules. Each metric represents a distinct code quality dimension.
 
 **Core Types:**
 - `QualityMetric`: Individual metric with name, value, threshold, severity, and optional message
@@ -66,7 +66,7 @@ pub trait QualityRule: Send + Sync {
 - `CouplingRule` - Fan-out and import checks (default: 7 deps, 15 imports)
 - `StructureStatsRule` - Symbol count checks (default: 20 functions, 30 types per file)
 
-**Configuration via `.codentro.toml`:**
+**Configuration via `.codescope.toml`:**
 ```toml
 [rules]
 max_file_loc = 300
@@ -82,7 +82,7 @@ max_function_loc = "Warning"
 max_fan_out = "Warning"
 ```
 
-Configuration is loaded from `.codentro.toml` in the analyzed file's parent directory, falling back to defaults if not found.
+Configuration is loaded from `.codescope.toml` in the analyzed file's parent directory, falling back to defaults if not found.
 
 ## Development Guidelines
 
@@ -144,20 +144,20 @@ fn walk_node(&self, node: tree_sitter::Node, source: &str, symbols: &mut Vec<Sym
 
 ```bash
 cargo build --release
-# Binary at: target/release/codentro
+# Binary at: target/release/codescope
 ```
 
 ### CLI Usage
 
 ```bash
 # View file analysis (table format with quality metrics)
-./target/release/codentro view path/to/file.ts
+./target/release/codescope view path/to/file.ts
 
 # JSON output (matches design doc schema)
-./target/release/codentro view path/to/file.ts --format json
+./target/release/codescope view path/to/file.ts --format json
 
 # Markdown output
-./target/release/codentro view path/to/file.ts --format md
+./target/release/codescope view path/to/file.ts --format md
 ```
 
 ### Batch Analysis
@@ -195,18 +195,18 @@ Implemented in `metrics::count_lines()`:
 ### Metrics Application Flow
 
 1. **Adapter parses file** → Returns `ModuleIR` with empty `metrics` vectors
-2. **CLI loads config** → Creates `RuleRegistry` from `.codentro.toml`
+2. **CLI loads config** → Creates `RuleRegistry` from `.codescope.toml`
 3. **CLI applies rules** → Populates `module.metrics` and `symbol.metrics`
 4. **Output formatter** → Displays metrics in requested format
 
-**Important:** Core (`codentro-core`) and adapters (`codentro-adapters`) are **metrics-agnostic**. They only extract structure. The CLI layer (`codentro-cli`) applies quality rules.
+**Important:** Core (`codescope-core`) and adapters (`codescope-adapters`) are **metrics-agnostic**. They only extract structure. The CLI layer (`codescope-cli`) applies quality rules.
 
 ### Config Loading
 
 ```rust
-// Load from .codentro.toml in parent directory, or use defaults
+// Load from .codescope.toml in parent directory, or use defaults
 let config_path = args.path.parent().and_then(|p| {
-    let config = p.join(".codentro.toml");
+    let config = p.join(".codescope.toml");
     if config.exists() { Some(config) } else { None }
 });
 let config = Config::load_or_default(config_path.as_deref());

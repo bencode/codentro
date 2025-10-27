@@ -1,17 +1,17 @@
 [package]
-name = "codentro-cli"
+name = "codescope-cli"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "codentro"
+name = "codescope"
 path = "src/main.rs"
 
 [dependencies]
-codentro-core = { path = "../codentro-core" }
-codentro-adapters = { path = "../codentro-adapters" }
+codescope-core = { path = "../codescope-core" }
+codescope-adapters = { path = "../codescope-adapters" }
 anyhow.workspace = true
 clap.workspace = true
 tabled.workspace = true
