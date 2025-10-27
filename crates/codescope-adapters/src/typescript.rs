@@ -59,10 +59,17 @@ impl TypeScriptAdapter {
                     let end = node.end_position().row;
                     let loc = (end - start + 1) as u32;
 
+                    let cyclomatic_complexity = if kind == SymbolKind::Function {
+                        Some(self.calculate_complexity(node, source))
+                    } else {
+                        None
+                    };
+
                     let symbol = Symbol {
                         kind,
                         name: name.to_string(),
                         loc,
+                        cyclomatic_complexity,
                         metrics: vec![],
                     };
                     symbols.push(symbol);
@@ -73,6 +80,51 @@ impl TypeScriptAdapter {
         for i in 0..node.child_count() {
             if let Some(child) = node.child(i) {
                 self.walk_node(child, source, symbols);
+            }
+        }
+    }
+
+    fn calculate_complexity(&self, node: tree_sitter::Node, source: &str) -> u32 {
+        let mut complexity = 1; // Base complexity
+        self.count_decision_points(node, source, &mut complexity);
+        complexity
+    }
+
+    fn count_decision_points(&self, node: tree_sitter::Node, source: &str, complexity: &mut u32) {
+        let kind = node.kind();
+
+        match kind {
+            // Conditional statements
+            "if_statement" => *complexity += 1,
+            // Loops
+            "for_statement" | "for_in_statement" | "while_statement" | "do_statement" => {
+                *complexity += 1
+            }
+            // Switch cases (each case adds complexity)
+            "switch_case" => *complexity += 1,
+            // Exception handling
+            "catch_clause" => *complexity += 1,
+            // Ternary operator
+            "ternary_expression" => *complexity += 1,
+            // Logical operators - need to check operator carefully
+            "binary_expression" => {
+                // Check if this is a logical operator (&&, ||)
+                for i in 0..node.child_count() {
+                    if let Some(child) = node.child(i) {
+                        if child.kind() == "&&" || child.kind() == "||" {
+                            *complexity += 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        // Recursively process children
+        for i in 0..node.child_count() {
+            if let Some(child) = node.child(i) {
+                self.count_decision_points(child, source, complexity);
             }
         }
     }

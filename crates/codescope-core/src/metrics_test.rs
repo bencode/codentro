@@ -79,6 +79,7 @@ fn test() {}
                 kind: SymbolKind::Function,
                 name: "largeFunction".to_string(),
                 loc: 100,
+                cyclomatic_complexity: None,
                 metrics: vec![],
             }],
             metrics: vec![],

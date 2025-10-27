@@ -36,6 +36,8 @@ pub struct Symbol {
     pub kind: SymbolKind,
     pub name: String,
     pub loc: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cyclomatic_complexity: Option<u32>,
     #[serde(default)]
     pub metrics: Vec<QualityMetric>,
 }

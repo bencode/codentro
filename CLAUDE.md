@@ -29,7 +29,12 @@ Codescope is a code structure analysis tool written in Rust, using Tree-sitter f
 - `QualityMetric`: Individual metric with name, value, threshold, severity, and optional message
 - `Severity`: Info | Warning | Error
 - `ModuleIR`: Contains `metrics: Vec<QualityMetric>` instead of single complexity field
-- `Symbol`: Contains `metrics: Vec<QualityMetric>` for symbol-level analysis
+- `Symbol`: Contains `metrics: Vec<QualityMetric>` for symbol-level analysis, plus structural attributes (`loc`, `cyclomatic_complexity`)
+
+**Symbol Structure Attributes:**
+- `loc: u32` - Lines of code (measured)
+- `cyclomatic_complexity: Option<u32>` - Cyclomatic complexity (measured for functions only)
+- `metrics: Vec<QualityMetric>` - Quality checks based on the above attributes
 
 **Metric Categories:**
 
@@ -49,6 +54,10 @@ Codescope is a code structure analysis tool written in Rust, using Tree-sitter f
    - `fan_in`: Number of dependents
    - `import_count`: Import statement count
 
+4. **Complexity Metrics:**
+   - `cyclomatic_complexity`: Measures function complexity based on decision points
+   - `high_complexity_count`: Number of functions exceeding complexity threshold
+
 ### Rule System
 
 **Architecture:**
@@ -65,6 +74,7 @@ pub trait QualityRule: Send + Sync {
 - `FunctionSizeRule` - Function size checks (default: 40 LOC)
 - `CouplingRule` - Fan-out and import checks (default: 7 deps, 15 imports)
 - `StructureStatsRule` - Symbol count checks (default: 20 functions, 30 types per file)
+- `ComplexityRule` - Cyclomatic complexity checks (default: 10)
 
 **Configuration via `.codescope.toml`:**
 ```toml
@@ -75,11 +85,13 @@ max_functions_per_file = 20
 max_types_per_file = 30
 max_fan_out = 7
 max_imports = 15
+max_complexity = 10
 
 [rules.severity]
 max_file_loc = "Warning"
 max_function_loc = "Warning"
 max_fan_out = "Warning"
+max_complexity = "Warning"
 ```
 
 Configuration is loaded from `.codescope.toml` in the analyzed file's parent directory, falling back to defaults if not found.
@@ -137,6 +149,32 @@ fn walk_node(&self, node: tree_sitter::Node, source: &str, symbols: &mut Vec<Sym
 ```
 
 **Note:** Symbols are extracted with `metrics: vec![]` - metrics are populated by rule system in CLI layer, not in adapter.
+
+### Cyclomatic Complexity
+
+**Calculation:** For each function, adapter calculates cyclomatic complexity using tree-sitter AST:
+
+```rust
+fn calculate_complexity(&self, node: tree_sitter::Node, source: &str) -> u32 {
+    let mut complexity = 1; // Base complexity
+    // Count decision points: if, for, while, switch cases, catch, ternary, &&, ||
+    self.count_decision_points(node, source, &mut complexity);
+    complexity
+}
+```
+
+**Decision Points Counted:**
+- Conditional statements: `if_statement`
+- Loops: `for_statement`, `for_in_statement`, `while_statement`, `do_statement`
+- Switch cases: `switch_case`
+- Exception handling: `catch_clause`
+- Ternary operators: `ternary_expression`
+- Logical operators: `&&`, `||` in `binary_expression`
+
+**Architecture Flow:**
+1. Adapter calculates `cyclomatic_complexity` during parsing (stored in `Symbol`)
+2. CLI applies `ComplexityRule` to check against threshold
+3. Rule generates `QualityMetric` if threshold exceeded
 
 ## Building & Running
 
@@ -200,12 +238,14 @@ Implemented in `metrics::count_lines()`:
 
 ### Metrics Application Flow
 
-1. **Adapter parses file** → Returns `ModuleIR` with empty `metrics` vectors
+1. **Adapter parses file** → Returns `ModuleIR` with:
+   - Structural attributes: `loc`, `cyclomatic_complexity` (calculated)
+   - Empty `metrics` vectors (to be filled by rules)
 2. **CLI loads config** → Creates `RuleRegistry` from `.codescope.toml`
-3. **CLI applies rules** → Populates `module.metrics` and `symbol.metrics`
+3. **CLI applies rules** → Populates `module.metrics` and `symbol.metrics` based on structural attributes
 4. **Output formatter** → Displays metrics in requested format
 
-**Important:** Core (`codescope-core`) and adapters (`codescope-adapters`) are **metrics-agnostic**. They only extract structure. The CLI layer (`codescope-cli`) applies quality rules.
+**Important:** Adapters calculate **objective structural attributes** (`loc`, `cyclomatic_complexity`). CLI applies **subjective quality rules** (thresholds, severity) to generate `metrics`.
 
 ### Config Loading
 
@@ -221,8 +261,8 @@ let registry = config.to_rule_registry();
 
 ## Roadmap Context
 
-- **v0.1** (current): CLI-only, multi-dimensional metrics, configurable rules
-- **v0.2** (next): MCP server + cyclomatic complexity analysis
+- **v0.1** (current): CLI-only, multi-dimensional metrics, configurable rules, cyclomatic complexity
+- **v0.2** (next): MCP server integration
 - **v0.3**: Optional web server + React frontend
 - **v0.4+**: Multi-language, call graphs, time-series analysis
 

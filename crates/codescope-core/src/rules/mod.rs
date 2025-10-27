@@ -4,6 +4,7 @@ pub mod file_size;
 pub mod function_size;
 pub mod coupling;
 pub mod structure_stats;
+pub mod complexity;
 
 pub trait QualityRule: Send + Sync {
     fn name(&self) -> &str;

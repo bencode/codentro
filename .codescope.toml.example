@@ -1,0 +1,31 @@
+# Codescope Configuration Example
+# Place this file as `.codescope.toml` in your project directory
+
+[rules]
+# File size threshold (lines of code)
+max_file_loc = 300
+
+# Function size threshold (lines of code)
+max_function_loc = 40
+
+# Maximum number of functions per file
+max_functions_per_file = 20
+
+# Maximum number of type definitions (types/interfaces/enums) per file
+max_types_per_file = 30
+
+# Coupling: maximum number of dependencies (fan-out)
+max_fan_out = 7
+
+# Coupling: maximum number of imports per file
+max_imports = 15
+
+# Cyclomatic complexity threshold for functions
+max_complexity = 10
+
+# Severity configuration for each rule
+[rules.severity]
+max_file_loc = "Warning"        # Options: "Error", "Warning", "Info"
+max_function_loc = "Warning"
+max_fan_out = "Warning"
+max_complexity = "Warning"

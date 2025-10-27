@@ -31,6 +31,9 @@ pub struct RulesConfig {
     #[serde(default = "default_max_imports")]
     pub max_imports: usize,
 
+    #[serde(default = "default_max_complexity")]
+    pub max_complexity: u32,
+
     #[serde(default)]
     pub severity: SeverityConfig,
 }
@@ -45,6 +48,9 @@ pub struct SeverityConfig {
 
     #[serde(default = "default_coupling_severity")]
     pub max_fan_out: String,
+
+    #[serde(default = "default_complexity_severity")]
+    pub max_complexity: String,
 }
 
 fn default_max_file_loc() -> u32 {
@@ -65,6 +71,9 @@ fn default_max_fan_out() -> usize {
 fn default_max_imports() -> usize {
     15
 }
+fn default_max_complexity() -> u32 {
+    10
+}
 fn default_file_size_severity() -> String {
     "Warning".to_string()
 }
@@ -72,6 +81,9 @@ fn default_function_size_severity() -> String {
     "Warning".to_string()
 }
 fn default_coupling_severity() -> String {
+    "Warning".to_string()
+}
+fn default_complexity_severity() -> String {
     "Warning".to_string()
 }
 
@@ -84,6 +96,7 @@ impl Default for RulesConfig {
             max_types_per_file: default_max_types_per_file(),
             max_fan_out: default_max_fan_out(),
             max_imports: default_max_imports(),
+            max_complexity: default_max_complexity(),
             severity: SeverityConfig::default(),
         }
     }
@@ -95,6 +108,7 @@ impl Default for SeverityConfig {
             max_file_loc: default_file_size_severity(),
             max_function_loc: default_function_size_severity(),
             max_fan_out: default_coupling_severity(),
+            max_complexity: default_complexity_severity(),
         }
     }
 }
@@ -148,6 +162,12 @@ impl Config {
             self.rules.max_functions_per_file,
             self.rules.max_types_per_file,
             Severity::Warning,
+        )));
+
+        let complexity_severity = parse_severity(&self.rules.severity.max_complexity);
+        registry.register(Box::new(complexity::ComplexityRule::new(
+            self.rules.max_complexity,
+            complexity_severity,
         )));
 
         registry

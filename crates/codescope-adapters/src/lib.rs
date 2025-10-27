@@ -1,5 +1,9 @@
 pub mod typescript;
 
+#[cfg(test)]
+#[path = "typescript_test.rs"]
+mod typescript_test;
+
 use codescope_core::types::{ModuleIR, Result};
 use std::path::Path;
 
