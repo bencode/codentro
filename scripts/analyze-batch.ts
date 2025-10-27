@@ -65,10 +65,10 @@ function findTypeScriptFiles(dir: string, baseDir: string): string[] {
   return files;
 }
 
-// 运行 entrota 分析单个文件
-function analyzeFile(filePath: string, entrotaBin: string): AnalysisResult | null {
+// 运行 codescope 分析单个文件
+function analyzeFile(filePath: string, codescopeBin: string): AnalysisResult | null {
   try {
-    const output = execSync(`${entrotaBin} view "${filePath}" --format json`, {
+    const output = execSync(`${codescopeBin} view "${filePath}" --format json`, {
       encoding: 'utf-8',
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
     });
@@ -84,16 +84,16 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length < 1) {
-    console.error('Usage: bun analyze-batch.ts <target-directory> [entrota-binary-path]');
+    console.error('Usage: bun analyze-batch.ts <target-directory> [codescope-binary-path]');
     console.error('');
     console.error('Example:');
     console.error('  bun analyze-batch.ts /path/to/packages');
-    console.error('  bun analyze-batch.ts /path/to/packages ./target/release/entrota');
+    console.error('  bun analyze-batch.ts /path/to/packages ./target/release/codescope');
     process.exit(1);
   }
 
   const targetDir = args[0];
-  const entrotaBin = args[1] || './target/release/entrota';
+  const codescopeBin = args[1] || './target/release/codescope';
 
   console.log(`🔍 Finding TypeScript files in: ${targetDir}`);
   const tsFiles = findTypeScriptFiles(targetDir, process.cwd());
@@ -117,7 +117,7 @@ async function main() {
     process.stdout.write(`\r⏳ Processing: ${percentage}% (${processed}/${tsFiles.length})`);
 
     try {
-      const result = analyzeFile(file, entrotaBin);
+      const result = analyzeFile(file, codescopeBin);
       if (result) {
         batchResult.results.push(result);
         batchResult.analyzedFiles++;
