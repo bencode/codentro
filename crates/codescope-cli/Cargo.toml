@@ -16,3 +16,4 @@ anyhow.workspace = true
 clap.workspace = true
 tabled.workspace = true
 serde_json.workspace = true
+walkdir.workspace = true
